@@ -1,0 +1,22 @@
+# Быстрая проверка пайплайна на маленьком GPU (не для итоговых результатов).
+name: smoke
+base: matrix.yaml
+
+scenarios: [S0, S1, S2, S3, S4]
+target_fps: [10]
+precision: [fp16]
+id_mode: [every_k_5]
+extra_runs: []
+
+models:
+  detector: { max_batch: 16 }
+  reid: { max_batch: 64 }
+  face_det: { max_batch: 16 }
+  face_emb: { max_batch: 64 }
+
+pipeline:
+  workers: 1
+
+search: { start: 2, growth: 2, precision: 1, warmup_s: 10, measure_s: 20, max_n: 16 }
+confirm: { scenarios: [] }
+calibration: { frames: 64, batch: 8 }

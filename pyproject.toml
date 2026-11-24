@@ -1,0 +1,41 @@
+[project]
+name = "h200-video-bench"
+version = "0.1.0"
+description = "Бенчмарк ёмкости GPU (H200) по числу камер для видеоаналитики людей"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+    "psutil>=5.9",
+    "nvidia-ml-py>=12.535",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+# GPU-пайплайн. В Docker-образе TensorRT уже есть в базовом образе nvcr.io/nvidia/tensorrt.
+gpu = [
+    "torch>=2.4",
+    "torchvision>=0.19",
+    "onnx>=1.16",
+    "onnxruntime-gpu>=1.19",
+    "PyNvVideoCodec>=1.0.2",
+]
+# Экспорт моделей (YOLO из ultralytics).
+export = [
+    "ultralytics>=8.3",
+]
+# TensorRT из PyPI — только для запуска вне Docker.
+trt = [
+    "tensorrt-cu12>=10.3",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

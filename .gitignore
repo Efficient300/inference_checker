@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+models/onnx/
+models/engines/
+models/cache/
+models/calibration/*.cache
+results/
+streamer/.pids
+REPORT_DRAFT.md
+report/

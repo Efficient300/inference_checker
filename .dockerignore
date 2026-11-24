@@ -1,0 +1,8 @@
+.venv
+data
+results
+models/onnx
+models/engines
+models/cache
+report
+**/__pycache__

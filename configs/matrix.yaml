@@ -1,0 +1,88 @@
+# Полная матрица замеров.
+name: h200_capacity
+
+source:
+  resolution: 1920x1080
+  codec: h264                      # основной кодек
+  source_fps: 25
+  video_files: data/videos/{codec}/*.mp4
+
+streamer:
+  mode: local                      # local: ffmpeg запускается на этой машине; external: потоки уже публикуются
+  rtsp_base: rtsp://127.0.0.1:8554
+  api: http://127.0.0.1:9997       # API MediaMTX (проверка готовности потоков)
+  cores: "0-3"                     # ядра CPU для ffmpeg (taskset)
+  ready_timeout_s: 60
+
+scenarios: [S0, S1, S2, S3, S4]
+target_fps: [5, 10, 15, 25]
+precision: [fp16, int8]
+id_mode: [every_k_5, new_tracks_only]   # только для S3/S4
+
+# Дополнительные прогоны (одна переменная за раз относительно основной матрицы)
+extra_runs:
+  - { scenarios: [S0, S4], override: { codec: h265 } }
+  - { scenarios: [S1], override: { detector_input: 1280 } }   # дальние планы
+
+models:
+  detector:
+    type: yolo
+    onnx: models/onnx/yolo11s.onnx
+    source: ultralytics:yolo11s.pt
+    input: 640
+    max_batch: 64
+    conf: 0.25
+    iou: 0.45
+    classes: [0]                   # person
+    max_det: 300
+  tracker:
+    type: bytetrack
+    track_thresh: 0.5
+    low_thresh: 0.1
+    new_track_thresh: 0.6
+    match_thresh: 0.8
+    track_buffer: 30
+  reid:
+    type: osnet
+    onnx: models/onnx/osnet_x1_0.onnx
+    source: osnet:x1_0             # веса: models.reid.weights (иначе случайная инициализация, см. README)
+    input: [256, 128]
+    max_batch: 256
+  face_det:
+    type: scrfd
+    onnx: models/onnx/scrfd_2.5g.onnx
+    source: insightface:buffalo_m/det_2.5g.onnx
+    input: 640
+    max_batch: 64
+    conf: 0.5
+  face_emb:
+    type: arcface
+    onnx: models/onnx/arcface_r50.onnx
+    source: insightface:buffalo_m/w600k_r50.onnx
+    input: 112
+    max_batch: 256
+
+pipeline:
+  workers: 4                       # процессов-воркеров (группы камер)
+  mps: false                       # запускать CUDA MPS на время точки
+  batch_timeout_ms: 10
+  queue_per_cam: 8                 # ёмкость очереди на камеру перед каждой моделью; переполнение = пропуск кадра
+  stall_timeout_s: 5               # нет кадров дольше — поток считается отвалившимся
+  drain_s: 3                       # дообработка кадров после окна замера
+  id_every_k: 5
+  face_min_person_h: 0             # 0 = искать лица на всех треках (худший случай)
+
+search: { start: 8, growth: 1.5, precision: 2, warmup_s: 60, measure_s: 300, max_n: 1000 }
+thresholds: { min_fps_ratio: 0.95, max_drop: 0.01, max_queue_slope: 0.05 }
+latency_report_ms: [200, 500]
+
+# Подтверждение N_max длинным прогоном
+confirm:
+  scenarios: [S4]
+  precision: [fp16, int8]
+  target_fps: [10, 25]
+  duration_s: 1800
+
+calibration:
+  frames: 1000
+  batch: 8

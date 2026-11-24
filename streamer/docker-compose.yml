@@ -1,0 +1,8 @@
+# RTSP-сервер для тестовых потоков. ffmpeg-публикаторы запускаются start_streams.sh.
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1.12.2
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
